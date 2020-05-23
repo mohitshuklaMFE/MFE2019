@@ -1,0 +1,81 @@
+---
+title: "Quantitative Asset Management | MGMTMFE 431 | Spring 2019"
+subtitle: "Problem Set 1: Market Portfolio"
+author: "Mohit Shukla"
+date: "June 8, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Construct the value-weighted market return using CRSP data,1 replicating the market return time series available in Kenneth French website.2 Also calculate the equal-weighted market return, and the lagged total market capitalization. Your output should be from January 1926 to December 2018, at a monthly frequency.
+
+
+```{r, echo=FALSE, message=FALSE, results='asis', warning=FALSE, cache=TRUE}
+library(data.table)
+library(readr)
+library(dplyr)
+
+
+setwd("~/MFE/Term3/431 Quantitative Asset Management/Practice")
+CRSP = data.table(read_csv("CRSP_Stocks.csv"))
+CRSP = CRSP[, date := as.Date(as.character(date), format = "%Y%m%d")]
+CRSP = CRSP[(SHRCD == 10 | SHRCD==11) & (EXCHCD ==1 | EXCHCD==2 | EXCHCD==3),]
+CRSP = CRSP[, RET := as.numeric(RET)]; CRSP = CRSP[, DLRET := as.numeric(DLRET)]
+CRSP = CRSP[, Return := coalesce((1+RET)*(1+DLRET)-1, RET, DLRET)]
+CRSP = CRSP[, lag_MCap := shift(abs(PRC)*SHROUT)/1000, by=PERMNO]
+CRSP = CRSP[, Year := as.integer(format(date, "%Y"))]
+CRSP = CRSP[, Month := as.integer(format(date, "%m"))]
+CRSP = CRSP[!is.na(Return),]
+
+CRSP_M = summarise(group_by(CRSP, Year, Month),
+                   Stock_lag_MV = sum(lag_MCap, na.rm = T),
+                   Stock_EW_Ret = mean(Return, na.rm = T),
+                   Stock_Vw_Ret = sum(Return*lag_MCap, na.rm = T)/Stock_lag_MV
+                   )[-1,]
+write.csv(CRSP_M, "CRSP_R.csv", row.names = FALSE)
+```
+
+```{r}
+library(knitr)
+kable(head(CRSP_M), caption="Return Table", digits=8)
+```
+
+## 2. Using the risk-free rate of return from French's website, report the following moments of the market excess returns for both time series (4 decimal digits): annualized return, annualized volatility, annualized Sharpe ratio, skewness, and excess kurtosis. You should be comparing between July 1926 to December 2018, at a monthly frequency.
+
+```{r, echo=FALSE, message=FALSE, results='asis', warning=FALSE, cache=TRUE}
+FF = data.table(read.csv("F-F_Research_Data_Factors.CSV", skip = 3, stringsAsFactors = FALSE))[c(1:1112),]
+colnames(FF)[1] = "date"
+FF = data.table(apply(FF, 2, as.numeric))
+FF = FF[, Year := as.integer(date/100)]; FF=FF[, Month := as.integer(date %% 100)]
+
+FF1 = data.table(merge(CRSP_M, FF, by=c("Year", "Month")))
+FF1 = FF1[, Mkt.RF.Ex := Stock_Vw_Ret - RF/100]
+FF1 = FF1[,c("Mkt.RF.Ex", "Mkt.RF")]
+FF1 = FF1[, Mkt.RF := Mkt.RF/100]
+
+library(moments)
+Out2 = data.table(cbind("Mean.Ann"=apply(FF1, 2, mean)*12,"SD.Ann"= apply(FF1, 2, sd)*sqrt(12)))
+Out2$SR.Ann = Out2$Mean/Out2$SD
+Out2$Skew = apply(FF1, 2, skewness)
+Out2$Ex.Kurt = apply(FF1, 2, kurtosis)-3
+Out2 = t(Out2)
+
+colnames(Out2) = c("Estimated
+FF Market Excess Return", "Actual FF Market Excess Return")
+
+kable(Out2, caption = "Moments Matrix")
+```
+
+# 3. Report (up to 8 decimal digits) the correlation between your time series and French's time series, and the maximum absolute difference between the two time series. It is zero? If not, justify whether the difference is economically negligible or not. What are the reasons a nonzero difference? You should be comparing between July 1926 to December 2018, at a monthly frequency.
+
+```{r, echo=FALSE}
+Out3 = c(cor(FF1$Mkt.RF.Ex, FF1$Mkt.RF), max(abs(FF1$Mkt.RF.Ex-FF1$Mkt.RF)))
+names(Out3) = c("Correlation", "Maximum Absolute Difference")
+
+kable(t(Out3), caption="Correlation & Difference")
+```
+
+
