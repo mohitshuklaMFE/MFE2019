@@ -9,8 +9,9 @@ Before calculating the portfolio time series, I conduct a series of data cleanin
 	Universe of stocks: Following Daniel-Moskowitz methodology, I restrict the sample to common shares (share codes 10 and 11) and to securities traded in the New York Stock Exchange, American Stock Exchange, or the Nasdaq Stock Exchange (exchange codes 1, 2, and 3).
 	Market Capitalization calculation: I calculate the total market cap of the stocks on the previous date to calculate lag_market_cap, by multiplying the last months’ Price of the stock with the last months’ shares outstanding. To get the market cap in millions, the product is divided by 1000 as the number of shares outstanding is in thousands. For dates where either Price or Shares Outstanding are missing, the rows are removed to prevent any distortion of data
 	Missing returns: Wherever the returns are missing, it is either the month of listing, or the month where the stock is listed. In such case, the returns are set as 0. The delisting returns are available in the last month for a stock, and the missing values everywhere else is set as 0.
-	Log Return calculation: The log returns are calculated as
-r_{new}=log\left(1+r_{DEL}\right)+log\left(1+r_{RET}\right)
+
+Log Return calculation: The log returns are calculated as
+$\ r_{new}=log\left(1+r_{DEL}\right)+log\left(1+r_{RET}\right) $
 	Ranking Returns: The ranking returns are calculated by taking the sum of log returns for months t-12 to t-2. All dates where returns for t-13 are not available are removed.
 	Sample period: The sample period has been selected from Dec-1925 to Dec-2018, which allows me to generate lag Market Cap and Ranking Returns data from Jan-1927 onwards.
 
